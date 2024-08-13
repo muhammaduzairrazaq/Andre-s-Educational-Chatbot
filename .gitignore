@@ -1,0 +1,15 @@
+# Ignore Python bytecode files
+*.pyc
+__pycache__/
+
+# Ignore environment files
+.env
+
+# Ignore directories
+logs/
+tmp/
+node_modules/
+
+# Ignore sensitive API keys or configuration files
+config.yaml
+keys.json
