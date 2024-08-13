@@ -10,6 +10,7 @@ import os
 from markdown import markdown
 
 os.environ["OPENAI_API_KEY"] = 'sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3'
+config = {"configurable": {"session_id": "oneA"}} # change the session id for changing the context
 
 max_token_limits = 3000
 temperature = 0.3
@@ -112,7 +113,6 @@ def chat():
     if query:
         # response = markdown(invoke_llm(query))
         response = invoke_llm(query)
-        # print(f"Sending response: {response}")
         return jsonify({'response': response})
     print("No query provided")
     return jsonify({'error': 'No query provided'}), 400
