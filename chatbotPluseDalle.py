@@ -1,0 +1,300 @@
+import os
+from io import BytesIO
+import openai
+import base64
+import requests
+from PIL import Image
+import tkinter as tk
+from PIL import ImageTk
+from flask import Flask, request, jsonify, render_template, Response
+from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import SystemMessage, trim_messages
+from operator import itemgetter
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.output_parsers import StrOutputParser
+parser = StrOutputParser()
+
+# Initialize Flask app
+app = Flask(__name__)
+
+# Set OpenAI API Key
+os.environ["OPENAI_API_KEY"] = 'sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3'
+
+# Create the chat model
+max_token_limits = 3000
+temperature = 0.3
+from langchain_openai import ChatOpenAI
+model = ChatOpenAI(model="gpt-4", max_tokens=max_token_limits, temperature=temperature)
+store = {}
+
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in store:
+        store[session_id] = InMemoryChatMessageHistory()
+    return store[session_id]
+
+rules = """
+Employ a professional tone with technical terms and in-depth explanations for college and advanced level queries. \
+Break down complex concepts into smaller, manageable steps for clarity. \
+Always provide examples while responding to user queries. \
+Be respectful of diverse backgrounds and cultural contexts. \
+Use Markdown for educational responses to structure content clearly (e.g., Introduction, Explanation, Examples, Summary) to make information more organized and accessible.
+"""
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            f"You are a helpful academic assistant having deep understanding of educational concepts, always respond in a friendly tone by following the rules {rules}. Always stick to the educational domain.",
+        ),
+        MessagesPlaceholder(variable_name="messages"),
+    ]
+)
+
+chain = prompt | model
+
+# Adding message history
+with_message_history = RunnableWithMessageHistory(chain, get_session_history)
+
+# Setting up trimmer
+trimmer = trim_messages(
+    max_tokens=65,
+    strategy="last",
+    token_counter=model,
+    include_system=True,
+    allow_partial=False,
+    start_on="human",
+)
+
+messages = [
+    SystemMessage(content="You are a helpful academic assistant"),
+]
+
+# Adding trimmer to the message for trimming old messages from the context
+chain = (
+    RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer)
+    | prompt
+    | model
+)
+
+with_message_history = RunnableWithMessageHistory(
+    chain,
+    get_session_history,
+    input_messages_key="messages",
+)
+
+config = {"configurable": {"session_id": "5a"}}  # Change the session ID for changing the context
+
+def invoke_llm(query):
+    response = with_message_history.invoke(
+        {
+            "messages": messages + [HumanMessage(content=query)],
+            "language": "English"
+        },
+        config=config,
+    )
+    messages.append(HumanMessage(content=query))  # Saving user message for context
+    messages.append(AIMessage(content=response.content))  # Saving AI message for context
+    return response.content
+
+def analyze_query(query):
+    max_token_limits = 1000
+    temperature = 0.3
+    model = ChatOpenAI(model="gpt-4o-mini", max_tokens=max_token_limits, temperature=temperature)
+
+    message = f"""
+    You are a chatbot that provides assistance with mathematical queries. Based on the user's query, you need to determine whether the query is related to mathematics and whether it requires or can be visualized with a plot. Here's how you should respond:
+
+    1. If the query involves a mathematical function, equation, or concept that can be visualized with a plot, even if it's a simple function like sine, cosine, or sigmoid: Return the Python code that can be used to draw the graph. The code should use libraries such as Matplotlib or Seaborn to generate the plot.
+
+    2. If the query is related to math but does not involve a function or equation that can be visualized with a plot: TRUE.
+
+    3. If the query is not related to math or does not involve any calculations or plots: FALSE.
+
+
+    Query: Plot the function \( f(x) = x^2 - 4x + 4 \) and identify its vertex and axis of symmetry.
+
+    Response:
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    x = np.linspace(-1, 5, 400)
+    y = x**2 - 4*x + 4
+
+    plt.plot(x, y, label='$f(x) = x^2 - 4x + 4$')
+    plt.title('Plot of $f(x) = x^2 - 4x + 4$')
+    plt.xlabel('x')
+    plt.ylabel('f(x)')
+    plt.axhline(0, color='black',linewidth=0.5)
+    plt.axvline(0, color='black',linewidth=0.5)
+    plt.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
+    plt.legend()
+    plt.show()
+
+    Query: Compare the sine and cosine functions.
+    Response:
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    x = np.linspace(0, 2*np.pi, 100)
+    sine = np.sin(x)
+    cosine = np.cos(x)
+    plt.plot(x, sine, label='Sine function')
+    plt.plot(x, cosine, label='Cosine function')
+    plt.title('Sine and Cosine Functions')
+    plt.xlabel('x')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    Query: What is the sine function?
+    Response:
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    x = np.linspace(0, 2*np.pi, 100)
+    sine = np.sin(x)
+
+    plt.plot(x, sine, label='Sine function')
+    plt.title('Sine Function')
+    plt.xlabel('x')
+    plt.ylabel('sin(x)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    Query: What is the sigmoid function?
+    Response:
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    x = np.linspace(-10, 10, 100)
+    sigmoid = 1 / (1 + np.exp(-x))
+
+    plt.plot(x, sigmoid, label='Sigmoid function')
+    plt.title('Sigmoid Function')
+    plt.xlabel('x')
+    plt.ylabel('sigmoid(x)')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    Query: Find the integral of \( x^2 \).
+    Response: TRUE
+
+    Query: How do you solve the quadratic equation \( ax^2 + bx + c = 0 \)?
+    Response: TRUE
+
+    Query: Graph the relationship between the number of hours studied and exam scores.
+    Response:
+    import matplotlib.pyplot as plt
+
+    hours = [1, 2, 3, 4, 5]
+    scores = [55, 60, 65, 70, 75]
+
+    plt.scatter(hours, scores)
+    plt.plot(hours, scores, linestyle='dashed', color='red')
+    plt.title('Hours Studied vs Exam Scores')
+    plt.xlabel('Hours Studied')
+    plt.ylabel('Exam Scores')
+    plt.grid(True)
+    plt.show()
+
+    Query: What is the time complexity of quicksort.
+    Response: FALSE
+
+    Query: What is the relationship between pressure and volume in a gas.
+    Response:
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    volume = np.linspace(1, 10, 100)
+    pressure = 1 / volume  # Assuming constant temperature for ideal gas law
+
+    plt.plot(volume, pressure, label='Pressure vs Volume')
+    plt.title('Pressure vs Volume (Ideal Gas Law)')
+    plt.xlabel('Volume')
+    plt.ylabel('Pressure')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    Query: {query}
+    Response: 
+    """
+
+    result = model.invoke(message)
+    return parser.invoke(result)
+
+def plot(code_string):
+    # Execute the code and get the buffer
+    buf = eval(f"({code_string})")
+
+    # Return the image from the buffer
+    return Response(buf.getvalue(), mimetype='image/png')
+
+def generate_image(prompt):
+    from openai import OpenAI
+    client = OpenAI(api_key="sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3")
+
+    
+    image_params = {
+        "model": "dall-e-3", 
+        "n": 1,
+        "size": "1024x1024",
+        "prompt": prompt,
+        "response_format": "url"  # Use "b64_json" if you prefer base64
+    }
+    
+    try:
+        images_response = client.images.generate(**image_params)
+    except openai.APIConnectionError as e:
+        return {"error": f"Server connection error: {e.__cause__}"}
+    except openai.RateLimitError as e:
+        return {"error": f"OpenAI RATE LIMIT error {e.status_code}: {e.response}"}
+    except openai.APIStatusError as e:
+        return {"error": f"OpenAI STATUS error {e.status_code}: {e.response}"}
+    except openai.BadRequestError as e:
+        return {"error": f"OpenAI BAD REQUEST error {e.status_code}: {e.response}"}
+    except Exception as e:
+        return {"error": f"An unexpected error occurred: {e}"}
+    
+    image_url_list = [image.model_dump()["url"] for image in images_response.data]
+    if image_url_list:
+        return {"image_url": image_url_list[0]}  # Return the first image URL
+
+    return {"error": "No image data was obtained."}
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    query = data.get('query')
+    if query:
+        # Analyze the query
+        # result = analyze_query(query)
+        # if result == 'FALSE':
+        # if result != 'TRUE' or result != 'FALSE':
+        # Generate image
+        image_response = generate_image(query)
+        
+        # Get text response
+        text_response = invoke_llm(query)
+        
+        response = {
+            'response': text_response,
+            'image': image_response.get('image_url'),
+            'error': image_response.get('error')
+        }
+        
+        return jsonify(response)
+    return jsonify({'error': 'No query provided'}), 400
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001)

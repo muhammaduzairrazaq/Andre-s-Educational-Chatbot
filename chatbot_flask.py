@@ -26,18 +26,11 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
         store[session_id] = InMemoryChatMessageHistory()
     return store[session_id]
 
+
 rules = """
-Use simple, easy-to-understand language for elementary school. \
-Introduce technical terms but explain them clearly for middle school. \
-Use a clear, instructive tone with detailed explanations for high school. \
-Always give at least one example even if user didn't ask for it. \
-Employ a professional tone with technical terms and in-depth explanations for college and advanced levels. \
+Employ a professional tone with technical terms and in-depth explanations for college and advanced level queries. \
 Break down complex concepts into smaller, manageable steps for clarity. \
-Engage users conversationally with follow-up questions to gauge understanding and encourage further discussion. \
-Adapt to user feedback, modifying responses based on additional questions to maintain an interactive learning experience. \
-Exhibit patience and empathy, especially with users struggling with concepts. \
-Reassure them and encourage them to ask for clarification. \
-Be mindful of learning styles and cultural differences, adapting responses to accommodate different learning paces and styles. \
+Always provide examples while responding to user queries. \
 Be respectful of diverse backgrounds and cultural contexts. \
 Use Markdown for educational responses to structure content clearly (e.g., Introduction, Explanation, Examples, Summary) to make information more organized and accessible.
 """
@@ -46,7 +39,7 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            f"You are a helpful academic assistant. If the user greets you, greet them back. If the user asks an educational query, respond strictly following the rules: {rules}. Always stick to the educational domain.",
+            f"You are a helpful academic assistant having deep understanding of educational concepts, always respond in a friendly tone by following the rules {rules}. Always stick to the educational domain.",
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]

@@ -34,32 +34,9 @@ from openai import OpenAI
 client = OpenAI(api_key="sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3")  # don't do this, OK?
 # client = OpenAI()  # will use environment variable "OPENAI_API_KEY"
 
-prompt = (
- "Subject: ballet dancers posing on a beam. "  # use the space at end
- "Style: romantic impressionist painting."     # this is implicit line continuation
-)
-
-
-# changes are mad choose if you want to show illustration or real images
-def generate_prompt(question):
-
-    return (
-        f"Subject: Realistic image clearly illustrating the concept of '{question}'. "
-        "Style: Clean and simple, using realistic visuals. "
-        "Include only the most essential objects or symbols directly related to the concept, avoiding any clutter or unnecessary details. "
-        "Focus on a minimalistic design that clearly represents the concept with realism and precision. "
-        "Ensure the image is clear, visually appealing, and easy to understand, helping the student grasp the concept quickly."
-        )
-
-
-
-
-
 # Example usage
-question = "illustrate the digestive system with a step-by-step sequence: food entering the mouth, traveling down the esophagus, being broken down in the stomach, absorbed in the intestines, and waste exiting the body"
-prompt = generate_prompt(question)
-
-
+question = "Can you explain the working of the humany respiratory system"
+prompt = question 
 
 
 
@@ -107,6 +84,7 @@ img_filename = images_dt.strftime('DALLE-%Y%m%d_%H%M%S')  # like 'DALLE-20231111
 
 # get the prompt used if rewritten by dall-e-3, null if unchanged by AI
 revised_prompt = images_response.data[0].revised_prompt
+print(f'Revised prompt: {revised_prompt}')
 
 # get out all the images in API return, whether url or base64
 # note the use of pydantic "model.data" style reference and its model_dump() method
