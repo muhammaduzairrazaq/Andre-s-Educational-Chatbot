@@ -17,6 +17,12 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 parser = StrOutputParser()
 
+import matplotlib.pyplot as plt
+import io
+
+import re
+
+
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -105,17 +111,17 @@ def analyze_query(query):
     model = ChatOpenAI(model="gpt-4o-mini", max_tokens=max_token_limits, temperature=temperature)
 
     message = f"""
-    You are a chatbot that provides assistance with mathematical queries. Based on the user's query, you need to determine whether the query is related to mathematics and whether it requires or can be visualized with a plot. Here's how you should respond:
+    You are a chatbot that provides assistance with educational queries. Based on the user's query, you need to determine whether the query explicitly asks for a plot or animation. Here's how you should respond:
 
-    1. If the query involves a mathematical function, equation, or concept that can be visualized with a plot, even if it's a simple function like sine, cosine, or sigmoid: Return the Python code that can be used to draw the graph. The code should use libraries such as Matplotlib or Seaborn to generate the plot.
+    1. If the query explicitly asks for a plot or animation (e.g., "plot a graph," "show an animation," etc.) and involves a mathematical function, equation, or concept that can be visualized with a plot: Return the Python code that can be used to draw the graph and dont add plot.show(). The code should use libraries such as Matplotlib or Seaborn.
 
-    2. If the query is related to math but does not involve a function or equation that can be visualized with a plot: TRUE.
+    2. If the query explicitly asks for a plot or animation, but the query is not related to math: Return `ANIMATION`.
 
-    3. If the query is not related to math or does not involve any calculations or plots: FALSE.
+    3. If the query does not explicitly ask for a plot or animation or any other visual illustration: Return `FALSE`.
 
+    And don't add any backticks ` in your response.
 
     Query: Plot the function \( f(x) = x^2 - 4x + 4 \) and identify its vertex and axis of symmetry.
-
     Response:
     import matplotlib.pyplot as plt
     import numpy as np
@@ -131,26 +137,27 @@ def analyze_query(query):
     plt.axvline(0, color='black',linewidth=0.5)
     plt.grid(color = 'gray', linestyle = '--', linewidth = 0.5)
     plt.legend()
-    plt.show()
 
-    Query: Compare the sine and cosine functions.
+    Query: Compare the sine and cosine functions using animations.
     Response:
-    import matplotlib.pyplot as plt
     import numpy as np
+    import matplotlib.pyplot as plt
 
-    x = np.linspace(0, 2*np.pi, 100)
-    sine = np.sin(x)
-    cosine = np.cos(x)
-    plt.plot(x, sine, label='Sine function')
-    plt.plot(x, cosine, label='Cosine function')
-    plt.title('Sine and Cosine Functions')
+    x = np.linspace(0, 2 * np.pi, 1000)
+
+    y_sin = np.sin(x)
+    y_cos = np.cos(x)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, y_sin, label='Sine Function', color='blue')
+    plt.plot(x, y_cos, label='Cosine Function', color='red')
     plt.xlabel('x')
-    plt.ylabel('Value')
+    plt.ylabel('y')
+    plt.title('Comparison of Sine and Cosine Functions')
     plt.legend()
     plt.grid(True)
-    plt.show()
 
-    Query: What is the sine function?
+    Query: What is sine function explain with animation.
     Response:
     import matplotlib.pyplot as plt
     import numpy as np
@@ -164,32 +171,35 @@ def analyze_query(query):
     plt.ylabel('sin(x)')
     plt.legend()
     plt.grid(True)
-    plt.show()
 
-    Query: What is the sigmoid function?
-    Response:
+    Query: How does the human respiratory system function explain with an animation.
+    Response: FALSE
+
+    Query: Show an illustration of the sigmoid function.
+    Response: 
     import matplotlib.pyplot as plt
     import numpy as np
+    from matplotlib.animation import FuncAnimation
 
     x = np.linspace(-10, 10, 100)
-    sigmoid = 1 / (1 + np.exp(-x))
+    fig, ax = plt.subplots()
+    line, = ax.plot(x, 1 / (1 + np.exp(-x)))
 
-    plt.plot(x, sigmoid, label='Sigmoid function')
-    plt.title('Sigmoid Function')
+    def update(frame):
+        line.set_ydata(1 / (1 + np.exp(-(x + frame / 10))))
+        return line,
+
+    ani = FuncAnimation(fig, update, frames=100, blit=True)
+    plt.title('Sigmoid Function Animation')
     plt.xlabel('x')
     plt.ylabel('sigmoid(x)')
-    plt.legend()
     plt.grid(True)
-    plt.show()
 
-    Query: Find the integral of \( x^2 \).
-    Response: TRUE
-
-    Query: How do you solve the quadratic equation \( ax^2 + bx + c = 0 \)?
-    Response: TRUE
+    Query: What is the time complexity of quicksort.
+    Response: FALSE
 
     Query: Graph the relationship between the number of hours studied and exam scores.
-    Response:
+    Response: 
     import matplotlib.pyplot as plt
 
     hours = [1, 2, 3, 4, 5]
@@ -201,40 +211,31 @@ def analyze_query(query):
     plt.xlabel('Hours Studied')
     plt.ylabel('Exam Scores')
     plt.grid(True)
-    plt.show()
-
-    Query: What is the time complexity of quicksort.
-    Response: FALSE
-
-    Query: What is the relationship between pressure and volume in a gas.
-    Response:
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    volume = np.linspace(1, 10, 100)
-    pressure = 1 / volume  # Assuming constant temperature for ideal gas law
-
-    plt.plot(volume, pressure, label='Pressure vs Volume')
-    plt.title('Pressure vs Volume (Ideal Gas Law)')
-    plt.xlabel('Volume')
-    plt.ylabel('Pressure')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
     Query: {query}
-    Response: 
+    Response:
     """
 
     result = model.invoke(message)
     return parser.invoke(result)
 
 def plot(code_string):
-    # Execute the code and get the buffer
-    buf = eval(f"({code_string})")
+    # Create a buffer to hold the image
+    buf = io.BytesIO()
 
-    # Return the image from the buffer
-    return Response(buf.getvalue(), mimetype='image/png')
+    # Execute the code
+    exec(code_string)
+
+    # Save the figure to the buffer
+    plt.savefig(buf, format='png')
+
+    # Close the plot to avoid display issues
+    plt.close()
+
+    # Move the buffer cursor to the beginning
+    buf.seek(0)
+
+    return buf.getvalue()
 
 def generate_image(prompt):
     from openai import OpenAI
@@ -268,6 +269,28 @@ def generate_image(prompt):
 
     return {"error": "No image data was obtained."}
 
+
+def remove_related_words(query):
+    # Convert the query to lowercase
+    query = query.lower()
+    
+    # List of words and their plural forms related to graphics to remove
+    words_to_remove = [
+        'animation', 'animations', 'plot', 'plots', 'graph', 'graphs',
+        'draw', 'draws', 'illustration', 'illustrations', 'chart', 'charts',
+        'diagram', 'diagrams', 'figure', 'figures', 'image', 'images',
+        'visual', 'visuals', 'sketch', 'sketches', 'render', 'renders'
+    ]
+    
+    # Create a regex pattern that matches any of the words
+    pattern = r'\b(?:' + '|'.join(words_to_remove) + r')\b'
+    
+    # Use re.sub to replace these words with an empty string
+    cleaned_query = re.sub(pattern, '', query, flags=re.IGNORECASE).strip()
+    
+    # Return the cleaned query
+    return ' '.join(cleaned_query.split())
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -278,19 +301,32 @@ def chat():
     query = data.get('query')
     if query:
         # Analyze the query
-        # result = analyze_query(query)
-        # if result == 'FALSE':
-        # if result != 'TRUE' or result != 'FALSE':
-        # Generate image
-        image_response = generate_image(query)
+        result = analyze_query(query)
+
+        print(f'Result of the analyze report {result}')
+
+        image_response = None
+        plot_base64 = None
+
+
+        if result == 'ANIMATION':
+            # Generate image
+            image_response = generate_image(query+' without adding any textual labels')
         
+        if result != 'ANIMATION' and result !=  'FALSE':
+            plot_base64 = plot(result)
+        
+
+        # Removing the keywords related to animation plotting etc
+        query = remove_related_words(query) 
         # Get text response
         text_response = invoke_llm(query)
         
         response = {
             'response': text_response,
-            'image': image_response.get('image_url'),
-            'error': image_response.get('error')
+            'image': image_response.get('image_url') if image_response else None,
+            'plot': plot_base64,
+            'error': image_response.get('error') if image_response else None
         }
         
         return jsonify(response)
