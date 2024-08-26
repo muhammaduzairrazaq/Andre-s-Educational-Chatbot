@@ -17,9 +17,12 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 parser = StrOutputParser()
 
+import numpy as np
 import matplotlib.pyplot as plt
-import io
+# from matplotlib.animation import FuncAnimation
+# import seaborn as sns
 
+import io
 import re
 
 
@@ -43,10 +46,12 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
 
 rules = """
 Employ a professional tone with technical terms and in-depth explanations for college and advanced level queries. \
+Dont Draw any animations just explain the topic asked by user like if the user asked you to draw a plot and there is nothing to explain you can simply explain the analysis on the graph. \
 Break down complex concepts into smaller, manageable steps for clarity. \
 Always provide examples while responding to user queries. \
 Be respectful of diverse backgrounds and cultural contexts. \
-Use Markdown for educational responses to structure content clearly (e.g., Introduction, Explanation, Examples, Summary) to make information more organized and accessible.
+Use Markdown for educational responses to structure content clearly (e.g., Introduction, Explanation, Examples, Summary) to make information more organized and accessible. \
+Dont say anything like this 'As an AI text-based model, I'm unable to draw graphs or animations' because the graphs or animations will be displyed to user by external systems so simple ignore it. \
 """
 
 prompt = ChatPromptTemplate.from_messages(
@@ -111,15 +116,24 @@ def analyze_query(query):
     model = ChatOpenAI(model="gpt-4o-mini", max_tokens=max_token_limits, temperature=temperature)
 
     message = f"""
-    You are a chatbot that provides assistance with educational queries. Based on the user's query, you need to determine whether the query explicitly asks for a plot or animation. Here's how you should respond:
+    You are a chatbot that provides assistance with educational queries. Based on the user's query, you need to determine whether a plot or animation is suitable. Here's how you should respond:
 
-    1. If the query explicitly asks for a plot or animation (e.g., "plot a graph," "show an animation," etc.) and involves a mathematical function, equation, or concept that can be visualized with a plot: Return the Python code that can be used to draw the graph and dont add plot.show(). The code should use libraries such as Matplotlib or Seaborn.
+    1. If the query explicitly asks for a plot or animation (e.g., "plot a graph," "show an animation," etc.) and involves a mathematical function, equation, or concept that can be visualized effectively with a plot: Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib, Seaborn etc, but do not add 'plt.show()'.
 
-    2. If the query explicitly asks for a plot or animation, but the query is not related to math: Return `ANIMATION`.
+    2. If the query asks for an animation, but a static plot is more appropriate due to simplicity, clarity, or accuracy: Generate and return the code for the plot instead.
 
-    3. If the query does not explicitly ask for a plot or animation or any other visual illustration: Return `FALSE`.
+    3. If the query explicitly asks for a plot or animation, but neither is suitable: Return ANIMATION.
 
-    And don't add any backticks ` in your response.
+    4. If the query does not explicitly ask for a plot or animation or any other visual illustration: Return FALSE.
+
+    5. User can also ask you to draw different charts (line, bar, histogram, pie, scatter, area, etc): Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib or Seaborn, but do not add 'plt.show()'.
+
+    Critical points:
+    
+    -Dont use backticks ` in your response
+    -Python code will be executed in a dynamic environment, such as a web server, where the code might be executed dynamically via exec() or similar methods. Ensure that any variables or objects needed within callback functions or loops are explicitly passed or encapsulated to prevent NameError or scope issues. Avoid relying on global variables.
+    -The generated code should only use following libraries matplotlib seaborn pandas plotly altair squarify
+    Here are some examples:
 
     Query: Plot the function \( f(x) = x^2 - 4x + 4 \) and identify its vertex and axis of symmetry.
     Response:
@@ -172,11 +186,11 @@ def analyze_query(query):
     plt.legend()
     plt.grid(True)
 
-    Query: How does the human respiratory system function explain with an animation.
+    Query: How does the human respiratory system function.
     Response: FALSE
 
     Query: Show an illustration of the sigmoid function.
-    Response: 
+    Response:
     import matplotlib.pyplot as plt
     import numpy as np
     from matplotlib.animation import FuncAnimation
@@ -185,21 +199,25 @@ def analyze_query(query):
     fig, ax = plt.subplots()
     line, = ax.plot(x, 1 / (1 + np.exp(-x)))
 
-    def update(frame):
+    def update(frame, line, x):
         line.set_ydata(1 / (1 + np.exp(-(x + frame / 10))))
         return line,
 
-    ani = FuncAnimation(fig, update, frames=100, blit=True)
+    ani = FuncAnimation(fig, update, frames=100, fargs=(line,x), blit=True)
+
     plt.title('Sigmoid Function Animation')
     plt.xlabel('x')
     plt.ylabel('sigmoid(x)')
     plt.grid(True)
 
-    Query: What is the time complexity of quicksort.
-    Response: FALSE
+    Query: What is the time complexity of quicksort show an animation.
+    Response: ANIMATION
+
+    Query: Draw a graph of human heart.
+    Response: ANIMATION
 
     Query: Graph the relationship between the number of hours studied and exam scores.
-    Response: 
+    Response:
     import matplotlib.pyplot as plt
 
     hours = [1, 2, 3, 4, 5]
@@ -220,6 +238,10 @@ def analyze_query(query):
     return parser.invoke(result)
 
 def plot(code_string):
+
+    # Use the Agg backend to avoid gui related issues
+    plt.switch_backend('Agg')
+
     # Create a buffer to hold the image
     buf = io.BytesIO()
 
@@ -235,7 +257,10 @@ def plot(code_string):
     # Move the buffer cursor to the beginning
     buf.seek(0)
 
-    return buf.getvalue()
+     # Encode the image in base64
+    img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return img_base64
 
 def generate_image(prompt):
     from openai import OpenAI
@@ -303,6 +328,7 @@ def chat():
         # Analyze the query
         result = analyze_query(query)
 
+        # Debug
         print(f'Result of the analyze report {result}')
 
         image_response = None
@@ -314,11 +340,15 @@ def chat():
             image_response = generate_image(query+' without adding any textual labels')
         
         if result != 'ANIMATION' and result !=  'FALSE':
-            plot_base64 = plot(result)
-        
+            plot_base64 = plot(result)  
 
         # Removing the keywords related to animation plotting etc
-        query = remove_related_words(query) 
+        # Debug
+        print(f'Query before removing unreleated words {query}')
+        # query = remove_related_words(query) 
+        # query = "" + query
+        # Debug
+        print(f'Query after removing unreleated words {query}')
         # Get text response
         text_response = invoke_llm(query)
         

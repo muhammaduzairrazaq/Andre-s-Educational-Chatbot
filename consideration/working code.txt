@@ -1,0 +1,14 @@
+Query: Draw a topographic map of South America
+Response:
+import pygmt
+grid = pygmt.datasets.load_earth_relief(resolution="30s", region=[-90, -70, -70, -50])
+fig = pygmt.Figure()
+fig.grdimage(grid=grid, cmap="geo", shading=True)
+fig.grdcontour(grid=grid, levels=100, annotation="200+f6p")
+fig.colorbar(frame='af+l"Elevation (m)"')
+fig.basemap(frame=True)
+fig.text(text="Topographic Map of South America Region", position="JTC", font="18p,Helvetica-Bold", offset="0/1.0c")
+fig.savefig("topographic_map.png")
+
+
+
