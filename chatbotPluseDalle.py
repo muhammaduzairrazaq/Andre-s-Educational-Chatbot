@@ -44,9 +44,11 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
         store[session_id] = InMemoryChatMessageHistory()
     return store[session_id]
 
+# Just explain the topic asked by user like if the user asked you to draw a plot first try to explain the concept asked by user and if there is nothing to explain you can simply explain the analysis on the drawn graph. Don't say anything like I can't draw as it will discourage the user and he might kill himself so don't say anything like this. \
+
 rules = """
 Employ a professional tone with technical terms and in-depth explanations for college and advanced level queries. \
-Just explain the topic asked by user like if the user asked you to draw a plot and there is nothing to explain you can simply explain the analysis on the drawn graph. Don't say anything like I can't draw as it will discourage the user and he might kill himself so don't say anything like this. \
+If the user ask for a graph then simply explain the theoretical concept asked in the question and if there is nothing to explain you can simply explain the analysis on the drawn graph. Strictly don't say anything like I can't draw as it will discourage the user so strictly don't say anything like this. \
 Break down complex concepts into smaller, manageable steps for clarity. \
 Always provide examples while responding to user queries. \
 Be respectful of diverse backgrounds and cultural contexts. \
@@ -96,7 +98,7 @@ with_message_history = RunnableWithMessageHistory(
     input_messages_key="messages",
 )
 
-config = {"configurable": {"session_id": "5a"}}  # Change the session ID for changing the context
+config = {"configurable": {"session_id": "11a"}}  # Change the session ID for changing the context
 
 def invoke_llm(query):
     response = with_message_history.invoke(
@@ -116,27 +118,32 @@ def analyze_query(query):
     model = ChatOpenAI(model="gpt-4o-mini", max_tokens=max_token_limits, temperature=temperature)
 
     message = f"""
-    You are a chatbot that provides assistance with educational queries. Based on the user's query, you need to determine whether a plot or animation is suitable. Here's how you should respond:
+    You are a chatbot that provides assistance with educational queries. Based on the user's query, you need to determine whether a plot or animation is suitable. Here's how you should respond: \
 
-    1. If the query explicitly asks for a plot or animation (e.g., "plot a graph," "show an animation," etc.) and involves a mathematical function, equation, or concept that can be visualized effectively with a plot: Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib, Seaborn etc, but do not add 'plt.show()'.
+    1. If the query explicitly asks for a plot or animation (e.g., "plot a graph," "show an animation," etc.) and involves a mathematical function, equation, or concept that can be visualized effectively with a plot: Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib, Seaborn etc, but do not add 'plt.show()'. \
 
-    2. If the query asks for an animation, but a static plot is more appropriate due to simplicity, clarity, or accuracy: Generate and return the code for the plot instead.
+    2. If the query asks for an animation, but a static plot is more appropriate due to simplicity, clarity, or accuracy: Generate and return the code for the plot instead. \
 
-    3. If the query explicitly asks for a plot or animation, but neither is suitable: Return ANIMATION.
+    3. If the query explicitly asks for a plot or animation, but neither is suitable: Return ANIMATION. \
 
-    4. If the query does not explicitly ask for a plot or animation or any other visual illustration: Return FALSE.
+    4. If the query does not explicitly ask for a plot or animation or any other visual illustration: Return FALSE. \
 
-    5. User can also ask you to draw different charts (topographic, line, bar, histogram, pie, scatter, area, etc): Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib or Seaborn and Pygmt, but do not add 'plt.show()' or 'fig.show()'.
+    5. User can also ask you to draw different charts (topographic, line, bar, histogram, pie, scatter, area, etc): Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib or Seaborn and Pygmt, but do not add 'plt.show()' or 'fig.show()'. \
 
-    6. While writing code for generating the topographic map always add the contour lines.
+    6. While writing code for generating the topographic map always add the contour lines. \
 
-    7. If the user asks a very complex topographic  map which is not possible with python code only then return ANIMATION otherwise top priority should be to return the python code.
+    7. If the user asks a very complex topographic  map which is not possible with python code only then return ANIMATION otherwise top priority should be to return the python code. \
 
     Critical points:
     
-    -Dont use backticks ` in your response
-    -Python code will be executed in a dynamic environment, such as a web server, where the code might be executed dynamically via exec() or similar methods. Ensure that any variables or objects needed within callback functions or loops are explicitly passed or encapsulated to prevent NameError or scope issues. Avoid relying on global variables.
-    -The generated code should only use following libraries matplotlib seaborn pandas plotly altair squarify
+    -Dont use backticks ` in your response. \
+    -Python code will be executed in a dynamic environment, such as a web server, where the code might be executed dynamically via exec() or similar methods. Ensure that any variables or objects needed within callback functions or loops are explicitly passed or encapsulated to prevent NameError or scope issues. Avoid relying on global variables. \
+    -The generated code should only use following libraries matplotlib seaborn pandas plotly altair squarify. \
+
+    Note:
+
+    - The user can ask very complex queries especially related to graphs always take your time to provide a correct code that satisfies the user requirements. \
+    
     Here are some examples:
 
     Query: Plot the function \( f(x) = x^2 - 4x + 4 \) and identify its vertex and axis of symmetry.
@@ -186,20 +193,46 @@ def analyze_query(query):
     fig.basemap(frame=True)
     fig.text(text="Topographic Map of the Contiguous United States", position="JTC", font="18p,Helvetica-Bold", offset="0/1.0c")
 
-    Query: What is sine function explain with animation.
+    Query: For a solenoid with 800 turns, a radius of 0.05 meters, and a length of 0.4 meters, calculate the time-varying magnetic field inside the solenoid if the current through the solenoid is given by 
+    I(t)=5cos(100πt). Plot the magnetic field and the induced electric field over one complete cycle of the current.
+
     Response:
-    import matplotlib.pyplot as plt
     import numpy as np
-
-    x = np.linspace(0, 2*np.pi, 100)
-    sine = np.sin(x)
-
-    plt.plot(x, sine, label='Sine function')
-    plt.title('Sine Function')
-    plt.xlabel('x')
-    plt.ylabel('sin(x)')
-    plt.legend()
+    import matplotlib.pyplot as plt
+    # Constants
+    mu_0 = 4 * np.pi * 10**-7  # T·m/A, permeability of free space
+    N = 800  # number of turns
+    L = 0.4  # length of solenoid in meters
+    r = 0.05  # radius of solenoid in meters
+    n = N / L  # turns per unit length
+    # Time array for one complete cycle
+    t = np.linspace(0, 0.02, 1000)  # 1000 points between 0 and 0.02 seconds (one cycle)
+    # Current as a function of time
+    I_t = 5 * np.cos(100 * np.pi * t)
+    # Magnetic field inside the solenoid
+    B_t = mu_0 * n * I_t
+    # Induced electric field (E = -dB/dt)
+    dB_dt = np.gradient(B_t, t)
+    E_t = -r * dB_dt  # E = -r * (dB/dt) for a solenoid with circular cross-section
+    # Plotting the magnetic field and induced electric field
+    plt.figure(figsize=(14, 6))
+    # Plot the magnetic field
+    plt.subplot(1, 2, 1)
+    plt.plot(t, B_t, label=r'$B(t)$')
+    plt.title('Magnetic Field Inside the Solenoid')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Magnetic Field (T)')
     plt.grid(True)
+    plt.legend()
+    # Plot the induced electric field
+    plt.subplot(1, 2, 2)
+    plt.plot(t, E_t, label=r'$E(t)$', color='r')
+    plt.title('Induced Electric Field')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Electric Field (V/m)')
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
 
     Quer: Draw a topographic map of China
     Response:
@@ -267,19 +300,38 @@ def analyze_query(query):
     Query: Draw a graph of human heart.
     Response: ANIMATION
 
-    Query: Graph the relationship between the number of hours studied and exam scores.
+    Query: Please provide me with an electronic and magnetic field graph for a current generated by a 500 turn solenoid from t=1 to t=5.
     Response:
+    import numpy as np
     import matplotlib.pyplot as plt
-
-    hours = [1, 2, 3, 4, 5]
-    scores = [55, 60, 65, 70, 75]
-
-    plt.scatter(hours, scores)
-    plt.plot(hours, scores, linestyle='dashed', color='red')
-    plt.title('Hours Studied vs Exam Scores')
-    plt.xlabel('Hours Studied')
-    plt.ylabel('Exam Scores')
-    plt.grid(True)
+    mu_0 = 4 * np.pi * 10**-7  # Permeability of free space (H/m)
+    N = 500  # Number of turns in the solenoid
+    I = 2  # Current through the solenoid (A)
+    length = 0.5  # Length of the solenoid (m)
+    t = np.linspace(1, 5, 500)  # Time from t=1 to t=5
+    # Magnetic field inside the solenoid (B = mu_0 * n * I)
+    B = mu_0 * (N / length) * I  # Constant magnetic field inside the solenoid
+    # Assuming a time-dependent electric field generated by a time-varying magnetic field
+    # Here, we model the electric field as E = dB/dt * r/2 (Faraday's law)
+    # As an example, we'll use a sinusoidal variation for the current and thus B
+    I_t = I * np.sin(2 * np.pi * t)  # Time-varying current
+    B_t = mu_0 * (N / length) * I_t  # Time-varying magnetic field
+    E_t = np.gradient(B_t, t) * 0.1  # Electric field (assuming r = 0.1 m)
+    # Plotting the graphs
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    # Magnetic field plot
+    ax[0].plot(t, B_t)
+    ax[0].set_title('Magnetic Field (B) inside the Solenoid')
+    ax[0].set_xlabel('Time (s)')
+    ax[0].set_ylabel('Magnetic Field (T)')
+    ax[0].grid(True)
+    # Electric field plot
+    ax[1].plot(t, E_t)
+    ax[1].set_title('Electric Field (E) induced by the Solenoid')
+    ax[1].set_xlabel('Time (s)')
+    ax[1].set_ylabel('Electric Field (V/m)')
+    ax[1].grid(True)
+    plt.tight_layout()
 
     Query: {query}
     Response:
@@ -290,29 +342,34 @@ def analyze_query(query):
 
 def plot(code_string):
 
-    # Use the Agg backend to avoid gui related issues
-    plt.switch_backend('Agg')
+    try:
+        # Use the Agg backend to avoid gui related issues
+        plt.switch_backend('Agg')
 
-    # Create a buffer to hold the image
-    buf = io.BytesIO()
+        # Create a buffer to hold the image
+        buf = io.BytesIO()
 
-    # Execute the code
-    exec(code_string)
+        # Execute the code
+        exec(code_string)
 
-    # Save the figure to the buffer
-    plt.savefig(buf, format='png')
+        # Save the figure to the buffer
+        plt.savefig(buf, format='png')
 
-    # Close the plot to avoid display issues
-    plt.close()
+        # Close the plot to avoid display issues
+        plt.close()
 
-    # Move the buffer cursor to the beginning
-    buf.seek(0)
+        # Move the buffer cursor to the beginning
+        buf.seek(0)
 
-     # Encode the image in base64
-    img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+        # Encode the image in base64
+        img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    except Exception as e:
+        # Handle exceptions and return an error message
+        print(f"An error occurred: {e}")
+        img_base64 = None
 
     return img_base64
-
 
 def plot2(code_string):
     # Define a dictionary to store the generated variables during exec()
@@ -390,6 +447,7 @@ def chat():
 
         image_response = None
         plot_base64 = None
+        context = None
 
 
         if result == 'ANIMATION':
@@ -398,13 +456,35 @@ def chat():
         
         if result != 'ANIMATION' and result !=  'FALSE':
             if 'pygmt' in result and 'topographic' in query.lower():
-                # Debug
-                print('Topographic plot is activated')
                 plot_base64 = plot2(result)
             else:
                 plot_base64 = plot(result)  
+            
+            if plot_base64 == None:
+                image_response = generate_image(query)
+
+        # if plot_base64 != None:
+        #     context = f"""
+        #     The user asked me a question related to plotting a graph: ```{query}``` \
+        #     and I have provided a visualization using the python code: ```{result}``` \
+        #     now I want you to just explain the theoratical concepts related to the question it could involve deriving formulas and other explanations.
+        #     """
+
+        #     query = context
+        
+        # if image_response != None:
+        #     context = f"""
+        #     The user asked me a question related to generating an image: ```{query}``` \
+        #     and I have provided the user with that image. \
+        #     now I want you to just explain the theoratical concepts related to the question.
+        #     """
+
+        #     query = context
+
 
         # Get text response
+        # DEBUG STATEMENT
+        print(f'QUERY TO THE CHATBOT: {query}')
         text_response = invoke_llm(query)
         
         response = {
