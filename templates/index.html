@@ -527,6 +527,10 @@
             max-width: 100%;
             height: auto;
         }
+        .plot-container img {
+            width: 700px;
+            height: 600px;
+        }
         .image-container {
             display: flex;
             justify-content: center;
@@ -582,7 +586,7 @@
 
                 // Check if the response contains a plot
                 if (data.plot) {
-                    messageHtml += `<div class="image-container"><img src="data:image/png;base64,${data.plot}" alt="Generated Plot"></div>`;
+                    messageHtml += `<div class="image-container plot-container"><img src="data:image/png;base64,${data.plot}" alt="Generated Plot"></div>`;
                 }
 
                 messageHtml += `<div>${aiResponseHtml}</div>`;

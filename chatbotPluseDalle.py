@@ -1,4 +1,5 @@
 import os
+import io
 from io import BytesIO
 import openai
 import base64
@@ -16,14 +17,13 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 parser = StrOutputParser()
+import pygmt
+import tempfile
 
 import numpy as np
 import matplotlib.pyplot as plt
-# from matplotlib.animation import FuncAnimation
-# import seaborn as sns
 
-import io
-import re
+from openai import OpenAI
 
 
 # Initialize Flask app
@@ -46,7 +46,7 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
 
 rules = """
 Employ a professional tone with technical terms and in-depth explanations for college and advanced level queries. \
-Dont Draw any animations just explain the topic asked by user like if the user asked you to draw a plot and there is nothing to explain you can simply explain the analysis on the graph. \
+Just explain the topic asked by user like if the user asked you to draw a plot and there is nothing to explain you can simply explain the analysis on the drawn graph. Don't say anything like I can't draw as it will discourage the user and he might kill himself so don't say anything like this. \
 Break down complex concepts into smaller, manageable steps for clarity. \
 Always provide examples while responding to user queries. \
 Be respectful of diverse backgrounds and cultural contexts. \
@@ -126,7 +126,11 @@ def analyze_query(query):
 
     4. If the query does not explicitly ask for a plot or animation or any other visual illustration: Return FALSE.
 
-    5. User can also ask you to draw different charts (line, bar, histogram, pie, scatter, area, etc): Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib or Seaborn, but do not add 'plt.show()'.
+    5. User can also ask you to draw different charts (topographic, line, bar, histogram, pie, scatter, area, etc): Return the Python code that can be used to draw the graph. Use libraries such as Matplotlib or Seaborn and Pygmt, but do not add 'plt.show()' or 'fig.show()'.
+
+    6. While writing code for generating the topographic map always add the contour lines.
+
+    7. If the user asks a very complex topographic  map which is not possible with python code only then return ANIMATION otherwise top priority should be to return the python code.
 
     Critical points:
     
@@ -171,6 +175,17 @@ def analyze_query(query):
     plt.legend()
     plt.grid(True)
 
+    Query: Draw a topographic map of the contiguous United States 
+    Response:
+    import pygmt
+    grid = pygmt.datasets.load_earth_relief(resolution="30s", region=[-125, -66.5, 24.396, 49.384])
+    fig = pygmt.Figure()
+    fig.grdimage(grid=grid, cmap="geo", shading=True)
+    fig.grdcontour(grid=grid, levels=500, annotation="1000+f6p")
+    fig.colorbar(frame='af+l"Elevation (m)"')
+    fig.basemap(frame=True)
+    fig.text(text="Topographic Map of the Contiguous United States", position="JTC", font="18p,Helvetica-Bold", offset="0/1.0c")
+
     Query: What is sine function explain with animation.
     Response:
     import matplotlib.pyplot as plt
@@ -186,8 +201,41 @@ def analyze_query(query):
     plt.legend()
     plt.grid(True)
 
+    Quer: Draw a topographic map of China
+    Response:
+    import pygmt
+    region = [73, 135, 18, 54]
+    grid = pygmt.datasets.load_earth_relief(resolution="05m", region=region)
+    fig = pygmt.Figure()
+    fig.basemap(region=region, projection="M6i", frame=True)
+    fig.grdimage(grid=grid, cmap="geo", shading=True)
+    fig.grdcontour(grid=grid, levels=500, annotation="1000+f8p,Helvetica-Bold,black", pen="1p,black")
+    fig.colorbar(frame=["x+lElevation (m)", "y+lm"])
+    fig.text(x=105, y=35, text="China", font="22p,Helvetica-Bold,black", justify="CM")
+    fig.text(x=116.4074, y=39.9042, text="Beijing", font="12p,Helvetica-Bold,black", justify="CM")
+    fig.text(x=121.4737, y=31.2304, text="Shanghai", font="12p,Helvetica-Bold,black", justify="CM")
+    fig.text(x=113.2644, y=23.1291, text="Guangzhou", font="12p,Helvetica-Bold,black", justify="CM")
+    fig.text(x=114.3055, y=30.5928, text="Wuhan", font="12p,Helvetica-Bold,black", justify="CM")
+    fig.text(x=87.6177, y=43.7928, text="Ürümqi", font="12p,Helvetica-Bold,black", justify="CM")
+
     Query: How does the human respiratory system function.
     Response: FALSE
+
+    Query: Draw a topographic map of Himalaya mountain range.
+    Response: 
+    import pygmt
+    region = [77, 92, 26, 38]
+    grid = pygmt.datasets.load_earth_relief(resolution="05m", region=region)
+    fig = pygmt.Figure()
+    fig.basemap(region=region, projection="M6i", frame=True)
+    fig.grdimage(grid=grid, cmap="geo", shading=True)
+    fig.grdcontour(grid=grid, levels=500, annotation="1000+f8p,Helvetica-Bold,black", pen="1p,black")
+    fig.colorbar(frame=["x+lElevation (m)", "y+lm"])
+    fig.text(x=86.9250, y=27.9881, text="Mount Everest", font="12p,Helvetica-Bold,white", justify="CM")
+    fig.text(x=81.5167, y=30.3756, text="Nanda Devi", font="12p,Helvetica-Bold,white", justify="CM")
+    fig.text(x=88.1475, y=27.7025, text="Kangchenjunga", font="12p,Helvetica-Bold,white", justify="CM")
+    fig.text(x=86.8333, y=28.0016, text="Lhotse", font="12p,Helvetica-Bold,white", justify="CM")
+    fig.text(x=88.1464, y=27.7668, text="Makalu", font="12p,Helvetica-Bold,white", justify="CM")
 
     Query: Show an illustration of the sigmoid function.
     Response:
@@ -211,6 +259,9 @@ def analyze_query(query):
     plt.grid(True)
 
     Query: What is the time complexity of quicksort show an animation.
+    Response: ANIMATION
+
+    Query: Draw a topographic map of moon.
     Response: ANIMATION
 
     Query: Draw a graph of human heart.
@@ -262,11 +313,39 @@ def plot(code_string):
 
     return img_base64
 
+
+def plot2(code_string):
+    # Define a dictionary to store the generated variables during exec()
+    local_vars = {}
+    
+    try:
+        # Execute the passed code string in a controlled local context
+        exec(code_string, {"pygmt": pygmt}, local_vars)
+        
+        # Extract the figure object from local_vars
+        fig = local_vars.get("fig")
+
+        # if fig is None:
+        #     raise ValueError("The code string must define a 'fig' object.")
+
+        # Save the figure to a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+            fig.savefig(tmpfile.name)
+            
+            # Read the file content into a buffer
+            with open(tmpfile.name, "rb") as f:
+                img_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+    except Exception as e:
+        # Handle exceptions and return an error message
+        print(f"An error occurred: {e}")
+        img_base64 = None
+    
+    return img_base64
+
 def generate_image(prompt):
-    from openai import OpenAI
     client = OpenAI(api_key="sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3")
 
-    
     image_params = {
         "model": "dall-e-3", 
         "n": 1,
@@ -294,28 +373,6 @@ def generate_image(prompt):
 
     return {"error": "No image data was obtained."}
 
-
-def remove_related_words(query):
-    # Convert the query to lowercase
-    query = query.lower()
-    
-    # List of words and their plural forms related to graphics to remove
-    words_to_remove = [
-        'animation', 'animations', 'plot', 'plots', 'graph', 'graphs',
-        'draw', 'draws', 'illustration', 'illustrations', 'chart', 'charts',
-        'diagram', 'diagrams', 'figure', 'figures', 'image', 'images',
-        'visual', 'visuals', 'sketch', 'sketches', 'render', 'renders'
-    ]
-    
-    # Create a regex pattern that matches any of the words
-    pattern = r'\b(?:' + '|'.join(words_to_remove) + r')\b'
-    
-    # Use re.sub to replace these words with an empty string
-    cleaned_query = re.sub(pattern, '', query, flags=re.IGNORECASE).strip()
-    
-    # Return the cleaned query
-    return ' '.join(cleaned_query.split())
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -337,18 +394,16 @@ def chat():
 
         if result == 'ANIMATION':
             # Generate image
-            image_response = generate_image(query+' without adding any textual labels')
+            image_response = generate_image(query)
         
         if result != 'ANIMATION' and result !=  'FALSE':
-            plot_base64 = plot(result)  
+            if 'pygmt' in result and 'topographic' in query.lower():
+                # Debug
+                print('Topographic plot is activated')
+                plot_base64 = plot2(result)
+            else:
+                plot_base64 = plot(result)  
 
-        # Removing the keywords related to animation plotting etc
-        # Debug
-        print(f'Query before removing unreleated words {query}')
-        # query = remove_related_words(query) 
-        # query = "" + query
-        # Debug
-        print(f'Query after removing unreleated words {query}')
         # Get text response
         text_response = invoke_llm(query)
         
