@@ -60,7 +60,7 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            f"You are a helpful academic assistant having deep understanding of educational concepts, always respond in a friendly tone by following the rules {rules}. Always stick to the educational domain.",
+            f"You are a helpful academic assistant having deep understanding of educational concepts including religion, investment, philosophy, always respond in a friendly tone by following the rules {rules}. Always stick to the educational domain.",
         ),
         MessagesPlaceholder(variable_name="messages"),
     ]
@@ -291,7 +291,22 @@ def analyze_query(query):
     plt.ylabel('sigmoid(x)')
     plt.grid(True)
 
+    Query: Draw a picture utilizing the fibonacci sequence.
+    Response: ANIMATION
+
+    Query: Draw an architectural blueprint inspired by fractal patterns.
+    Response: ANIMATION
+
+    Query: Illustrate a landscape using the concept of symmetry and balance.
+    Response: ANIMATION
+
     Query: What is the time complexity of quicksort show an animation.
+    Response: ANIMATION
+
+    Query: Design a piece of jewelry that reflects the structure of a snowflake.
+    Response: ANIMATION
+
+    Query: Design a futuristic vehicle using aerodynamic curves found in nature.
     Response: ANIMATION
 
     Query: Draw a topographic map of moon.
