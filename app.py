@@ -30,7 +30,7 @@ from openai import OpenAI
 app = Flask(__name__)
 
 # Set OpenAI API Key
-os.environ["OPENAI_API_KEY"] = 'sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3'
+os.environ["OPENAI_API_KEY"] = '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'
 
 # Create the chat model
 max_token_limits = 3000
@@ -416,7 +416,7 @@ def plot2(code_string):
     return img_base64
 
 def generate_image(prompt):
-    client = OpenAI(api_key="sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3")
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
     image_params = {
         "model": "dall-e-3", 
