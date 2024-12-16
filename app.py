@@ -25,18 +25,19 @@ import matplotlib.pyplot as plt
 
 from openai import OpenAI
 
-
 # Initialize Flask app
 app = Flask(__name__)
 
 # Set OpenAI API Key
-os.environ["OPENAI_API_KEY"] = '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'
+# os.environ["OPENAI_API_KEY"] = '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'
+
+OPENAI_API_KEY = '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'
 
 # Create the chat model
 max_token_limits = 3000
 temperature = 0.3
 from langchain_openai import ChatOpenAI
-model = ChatOpenAI(model="gpt-4", max_tokens=max_token_limits, temperature=temperature)
+model = ChatOpenAI(model="gpt-4", max_tokens=max_token_limits, temperature=temperature, api_key=OPENAI_API_KEY)
 store = {}
 
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
@@ -115,7 +116,7 @@ def invoke_llm(query):
 def analyze_query(query):
     max_token_limits = 1000
     temperature = 0.3
-    model = ChatOpenAI(model="gpt-4o-mini", max_tokens=max_token_limits, temperature=temperature)
+    model = ChatOpenAI(model="gpt-4o-mini", max_tokens=max_token_limits, temperature=temperature, api_key=OPENAI_API_KEY)
 
     message = f"""
     You are a chatbot that provides assistance with educational queries. Based on the user's query, you need to determine whether a plot or animation is suitable. Here's how you should respond: \
@@ -416,7 +417,7 @@ def plot2(code_string):
     return img_base64
 
 def generate_image(prompt):
-    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
     image_params = {
         "model": "dall-e-3", 

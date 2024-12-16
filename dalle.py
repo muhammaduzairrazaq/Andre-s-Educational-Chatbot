@@ -12,7 +12,7 @@ pip install pillow
 '''
 import os
 from io import BytesIO
-import openai                  # for handling error types
+import openai                # for handling error types
 from datetime import datetime  # for formatting date returned with images
 import base64                  # for decoding images if recieved in the reply
 import requests                # for downloading images from URLs
@@ -31,7 +31,11 @@ if old_package(openai.__version__, "1.2.3"):
                      ">>You should run 'pip install --upgrade openai')")
 
 from openai import OpenAI
-client = OpenAI(api_key="sk-proj-q1GTGj6dEBBxnyx5J9dqT3BlbkFJIOUADKjYN9wyPDa8a3H3")  # don't do this, OK?
+
+OPENAI_API_KEY = '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'
+
+
+client = OpenAI(api_key=OPENAI_API_KEY)  # don't do this, OK?
 # client = OpenAI()  # will use environment variable "OPENAI_API_KEY"
 
 # Example usage
@@ -62,16 +66,16 @@ image_params.update({"quality": "standard"})      # quality at 2x the price, def
 # here's the actual request to API and lots of error catching
 try:
     images_response = client.images.generate(**image_params)
-except openai.APIConnectionError as e:
+except p.APIConnectionError as e:
     print("Server connection error: {e.__cause__}")  # from httpx.
     raise
-except openai.RateLimitError as e:
+except p.RateLimitError as e:
     print(f"OpenAI RATE LIMIT error {e.status_code}: (e.response)")
     raise
-except openai.APIStatusError as e:
+except p.APIStatusError as e:
     print(f"OpenAI STATUS error {e.status_code}: (e.response)")
     raise
-except openai.BadRequestError as e:
+except p.BadRequestError as e:
     print(f"OpenAI BAD REQUEST error {e.status_code}: (e.response)")
     raise
 except Exception as e:
