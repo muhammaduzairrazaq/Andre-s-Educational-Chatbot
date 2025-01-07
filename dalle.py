@@ -32,8 +32,7 @@ if old_package(openai.__version__, "1.2.3"):
 
 from openai import OpenAI
 
-OPENAI_API_KEY = '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'
-
+OPENAI_API_KEY = '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'
 
 client = OpenAI(api_key=OPENAI_API_KEY)  # don't do this, OK?
 # client = OpenAI()  # will use environment variable "OPENAI_API_KEY"
@@ -66,16 +65,16 @@ image_params.update({"quality": "standard"})      # quality at 2x the price, def
 # here's the actual request to API and lots of error catching
 try:
     images_response = client.images.generate(**image_params)
-except p.APIConnectionError as e:
+except openai.APIConnectionError as e:
     print("Server connection error: {e.__cause__}")  # from httpx.
     raise
-except p.RateLimitError as e:
+except openai.RateLimitError as e:
     print(f"OpenAI RATE LIMIT error {e.status_code}: (e.response)")
     raise
-except p.APIStatusError as e:
+except openai.APIStatusError as e:
     print(f"OpenAI STATUS error {e.status_code}: (e.response)")
     raise
-except p.BadRequestError as e:
+except openai.BadRequestError as e:
     print(f"OpenAI BAD REQUEST error {e.status_code}: (e.response)")
     raise
 except Exception as e:

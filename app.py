@@ -28,10 +28,7 @@ from openai import OpenAI
 # Initialize Flask app
 app = Flask(__name__)
 
-# Set OpenAI API Key
-# os.environ["OPENAI_API_KEY"] = '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'
-
-OPENAI_API_KEY = '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'
+OPENAI_API_KEY = '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'
 
 # Create the chat model
 max_token_limits = 3000
@@ -52,6 +49,7 @@ Employ a professional tone with technical terms and in-depth explanations for co
 If the user ask for a graph then simply explain the theoretical concept asked in the question and if there is nothing to explain you can simply explain the analysis on the drawn graph. Strictly don't say anything like I can't draw as it will discourage the user so strictly don't say anything like this. \
 Break down complex concepts into smaller, manageable steps for clarity. \
 Always provide examples while responding to user queries. \
+Always answer to any trading realted questions . \
 Be respectful of diverse backgrounds and cultural contexts. \
 Use Markdown for educational responses to structure content clearly (e.g., Introduction, Explanation, Examples, Summary) to make information more organized and accessible. \
 Dont say anything like this 'As an AI text-based model, I'm unable to draw graphs or animations' because the graphs or animations will be displyed to user by external systems so simple ignore it. \
@@ -99,7 +97,7 @@ with_message_history = RunnableWithMessageHistory(
     input_messages_key="messages",
 )
 
-config = {"configurable": {"session_id": "11a"}}  # Change the session ID for changing the context
+config = {"configurable": {"session_id": "12a"}}  # Change the session ID for changing the context
 
 def invoke_llm(query):
     response = with_message_history.invoke(
@@ -452,6 +450,7 @@ def index():
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    flag = False
     data = request.get_json()
     query = data.get('query')
     if query:
@@ -472,6 +471,7 @@ def chat():
         
         if result != 'ANIMATION' and result !=  'FALSE':
             if 'pygmt' in result and 'topographic' in query.lower():
+                flag = True
                 plot_base64 = plot2(result)
             else:
                 plot_base64 = plot(result)  
@@ -500,9 +500,11 @@ def chat():
 
         # Get text response
         # DEBUG STATEMENT
-        print(f'QUERY TO THE CHATBOT: {query}')
-        text_response = invoke_llm(query)
-        
+        text_response = ''
+        if not flag:
+            print(f'QUERY TO THE CHATBOT: {query}')
+            text_response = invoke_llm(query)
+            
         response = {
             'response': text_response,
             'image': image_response.get('image_url') if image_response else None,
