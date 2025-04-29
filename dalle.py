@@ -32,7 +32,7 @@ if old_package(openai.__version__, "1.2.3"):
 
 from openai import OpenAI
 
-OPENAI_API_KEY = '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'
+OPENAI_API_KEY = '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'
 
 client = OpenAI(api_key=OPENAI_API_KEY)  # don't do this, OK?
 # client = OpenAI()  # will use environment variable "OPENAI_API_KEY"

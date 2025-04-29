@@ -28,7 +28,7 @@ from openai import OpenAI
 # Initialize Flask app
 app = Flask(__name__)
 
-OPENAI_API_KEY = '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'
+OPENAI_API_KEY = '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'
 
 # Create the chat model
 max_token_limits = 3000
@@ -516,4 +516,4 @@ def chat():
     return jsonify({'error': 'No query provided'}), 400
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5001) # remove the debug True thing... before putting this to production
