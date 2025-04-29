@@ -28,7 +28,7 @@ from openai import OpenAI
 # Initialize Flask app
 app = Flask(__name__)
 
-OPENAI_API_KEY = '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'
+OPENAI_API_KEY = ''
 
 # Create the chat model
 max_token_limits = 3000
