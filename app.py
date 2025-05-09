@@ -25,6 +25,12 @@ import matplotlib.pyplot as plt
 
 from openai import OpenAI
 
+import os
+
+# Define the path where the images will be saved
+UPLOAD_FOLDER = './uploads'  # This will save the images to a folder named 'uploads' in the current directory
+os.makedirs(UPLOAD_FOLDER, exist_ok=True) 
+
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -414,6 +420,33 @@ def plot2(code_string):
     
     return img_base64
 
+
+def analyze_image(query, image):
+    """
+    Analyzes the given image (in base64 format) and query by sending them to OpenAI for processing.
+    Returns the AI's response to the analysis.
+    """
+ 
+    openai.api_key = OPENAI_API_KEY
+
+    base64_image = base64.b64encode(image).decode('utf-8')
+
+    # Now you can use base64_image directly (it is already in the correct base64 format)
+    response = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": query},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+            ]
+        }]
+    )
+
+    # Get the response from OpenAI
+    text_response = response.choices[0].message.content
+    return text_response
+
 def generate_image(prompt):
     client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -451,9 +484,28 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     flag = False
-    data = request.get_json()
-    query = data.get('query')
-    if query:
+
+
+    query = request.form.get('query')
+    image_file = request.files.get('image')
+    
+
+    text_response = ''
+
+    if query and image_file:
+        print(f"DEBUG: Initiating image module.")
+
+        # Read the image file in memory and process it
+        image_data = image_file.read()
+
+        text_response = analyze_image(query, image_data)
+        response = {
+            'response': text_response,
+        }
+        
+        return jsonify(response)
+
+    else:
         # Analyze the query
         result = analyze_query(query)
 
@@ -500,7 +552,6 @@ def chat():
 
         # Get text response
         # DEBUG STATEMENT
-        text_response = ''
         if not flag:
             print(f'QUERY TO THE CHATBOT: {query}')
             text_response = invoke_llm(query)

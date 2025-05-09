@@ -1,0 +1,160 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>Chat with LLM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 80%;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+        .chat-input-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background-color: white;
+            border-top: 1px solid #ccc;
+        }
+        .chat-input {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        .chat-input input {
+            border: none;
+            outline: none;
+            flex: 1;
+            padding: 0 10px;
+        }
+        .chat-input button {
+            background-color: #007bff;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #0056b3;
+        }
+        .image-container img {
+            width: 500px;
+            height: 400px;
+            max-width: 100%;
+            height: auto;
+        }
+        .plot-container img {
+            width: 700px;
+            height: 600px;
+        }
+        .image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .user-query p {
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="messages" id="message-container"></div>
+        <div class="chat-input-container">
+            <div class="chat-input">
+                <input type="text" id="query" placeholder="Ask me anything...">
+                <button onclick="sendQuery()">Send</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function sendQuery() {
+            const query = document.getElementById('query').value;
+            if (query.trim() === '') return;
+
+            // Clear the input field immediately after sending the query
+            document.getElementById('query').value = '';
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageContainer = document.getElementById('message-container');
+                let aiResponseHtml = marked.parse(data.response);  // Convert the AI response to HTML using marked
+
+                let messageHtml = `<div class="user-query"><p>Question: ${query}</p></div>`;
+
+                // Check if the response contains an image
+                if (data.image) {
+                    messageHtml += `<div class="image-container"><img src="${data.image}" alt="Generated Image"></div>`;
+                }
+
+                // Check if the response contains a plot
+                if (data.plot) {
+                    messageHtml += `<div class="image-container plot-container"><img src="data:image/png;base64,${data.plot}" alt="Generated Plot"></div>`;
+                }
+
+                messageHtml += `<div>${aiResponseHtml}</div>`;
+                
+                if (data.error) {
+                    messageHtml += `<div class="error">Error: ${data.error}</div>`;
+                }
+
+                messageContainer.innerHTML += `<div>${messageHtml}</div>`;
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
+ -->
