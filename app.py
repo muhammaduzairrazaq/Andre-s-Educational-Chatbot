@@ -36,6 +36,7 @@ app = Flask(__name__)
 
 OPENAI_API_KEY = ''
 
+
 # Create the chat model
 max_token_limits = 3000
 temperature = 0.3
